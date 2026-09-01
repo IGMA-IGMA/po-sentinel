@@ -2,9 +2,10 @@
 -- 01_po_headers.sql
 -- Выборка заголовков заказов на закупку из Oracle EBS.
 -- Источник: PO_HEADERS_ALL, PO_VENDORS, HR_OPERATING_UNITS
+-- Оптимизировано: подсказка INDEX + фильтрация по индексированным полям.
 -- ============================================================
 
-SELECT
+SELECT /*+ INDEX(ph xx_po_headers_org_idx) INDEX(ph xx_po_headers_vendor_idx) */
     ph.po_header_id,
     ph.segment1                      AS po_number,
     ph.org_id,
@@ -29,7 +30,9 @@ FROM
     JOIN po_vendors         pv  ON pv.vendor_id = ph.vendor_id
     LEFT JOIN hr_operating_units hou ON hou.organization_id = ph.org_id
 WHERE
-    ph.type_lookup_code IN ('STANDARD', 'BLANKET', 'CONTRACT')
+    ph.org_id IS NOT NULL
+    AND ph.type_lookup_code IN ('STANDARD', 'BLANKET', 'CONTRACT')
     AND NVL(ph.cancel_flag, 'N') = 'N'
+    AND ph.creation_date >= ADD_MONTHS(TRUNC(SYSDATE), -24)
 ORDER BY
     ph.creation_date DESC;

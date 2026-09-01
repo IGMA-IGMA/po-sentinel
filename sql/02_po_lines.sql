@@ -2,9 +2,10 @@
 -- 02_po_lines.sql
 -- Выборка строк заказов на закупку.
 -- Источник: PO_LINES_ALL, PO_LINE_LOCATIONS_ALL, PO_DISTRIBUTIONS_ALL
+-- Оптимизировано: HASH JOIN, без коррелированных подзапросов.
 -- ============================================================
 
-SELECT
+SELECT /*+ USE_HASH(pl pll) INDEX(pl xx_po_lines_header_idx) INDEX(pll xx_po_line_loc_line_idx) */
     pl.po_line_id,
     pl.po_header_id,
     pl.line_num,
@@ -26,7 +27,7 @@ SELECT
     pll.promised_date,
     pll.need_by_date,
     pll.expected_receipt_date,
-    pll.quantity,
+    pll.quantity                      AS loc_quantity,
     pll.quantity_cancelled            AS loc_quantity_cancelled
 FROM
     po_lines_all             pl
