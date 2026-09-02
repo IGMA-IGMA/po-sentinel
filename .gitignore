@@ -9,6 +9,11 @@ venv/
 # Config (реальные значения не коммитим)
 config/config.yaml
 
+# Output и логи
+out/
+logs/
+*.log
+
 # IDE
 .vscode/
 .idea/
@@ -17,10 +22,6 @@ config/config.yaml
 # OS
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-logs/
 
 # Build
 dist/

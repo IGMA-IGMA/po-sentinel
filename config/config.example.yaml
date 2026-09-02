@@ -1,0 +1,35 @@
+# ============================================================
+# PO Sentinel — пример конфигурации.
+# Скопируйте в config/config.yaml и подставьте реальные значения.
+# Файл config/config.yaml добавлен в .gitignore.
+# ============================================================
+
+oracle:
+  user: "apps"
+  password: "CHANGE_ME"
+  dsn: "//oebs-db.example.local:1521/EBSDB"
+
+api:
+  base_url: "https://portal.example.local/api"
+  token: "CHANGE_ME"
+  timeout: 30
+  retries: 3
+
+smtp:
+  host: "smtp.example.local"
+  port: 587
+  user: "po-sentinel@example.local"
+  password: "CHANGE_ME"
+  sender: "po-sentinel@example.local"
+  recipients:
+    - "procurement-team@example.local"
+    - "analytics@example.local"
+  use_tls: true
+
+webhook:
+  url: "https://chat.example.local/hooks/po-sentinel"
+  token: "CHANGE_ME"
+
+paths:
+  output_dir: "./out"
+  log_dir: "./logs"
