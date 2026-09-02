@@ -50,6 +50,40 @@ PL/SQL-пакет реализует правила выявления проб�
 - Расхождение цены: цена в счёте отличается от цены в заказе.
 - Задолженность по счетам: счёт не оплачен после срока.
 
+## Расширение OeBS (PL/SQL)
+
+Каталог `oebs/plsql/`:
+
+| Файл                             | Назначение                                                 |
+|----------------------------------|------------------------------------------------------------|
+| `xx_problem_orders_pkg.sql`      | Спецификация пакета: API для OAF и конкурентной программы  |
+| `xx_problem_orders_pkg_body.sql` | Тело пакета: правила выявления проблемных заказов          |
+| `xx_problem_orders_conc.sql`     | Регистрация конкурентной программы и расписания в EBS      |
+
+### API пакета `xx_problem_orders_pkg`
+
+- `get_problem_orders(p_org_id, p_date_from, p_date_to, p_vendor_id)` —
+  пайплайновая функция, возвращает коллекцию проблемных заказов.
+- `evaluate_order(p_po_header_id)` — проверяет один заказ по всем правилам.
+- `refresh_problem_orders` — обновляет материализованные представления.
+- `notify_responsible(p_org_id)` — инициирует отправку уведомлений.
+- `count_problem_orders(p_org_id)` — количество проблемных заказов.
+- `get_supplier_problem_amount(p_vendor_id)` — сумма проблем по поставщику.
+
+### Конкурентная программа
+
+- Executable: `XX_PROBLEM_ORDERS` (SQL*Plus).
+- Program: `XX_PROBLEM_ORDERS_REFRESH`.
+- Параметры: `P_ORG_ID` (опционально), `P_NOTIFY` (Y/N).
+- Расписание: job `XX_PROBLEM_ORDERS_DAILY` — ежедневно в 02:15.
+
+## Взаимодействие с Python
+
+Конкурентная программа после пересчёта MV вызывает Python-скрипт
+`python/notify.py` (через хост-команду или внешний планировщик) для
+отправки сводки по email и webhook. Данные для сводки берутся из
+`XX_MV_SUPPLIER_SUMMARY`.
+
 ## Развёртывание
 
 Среда: Arch Linux, Oracle DB XE, Oracle EBS (тестовый стенд), Oracle BI.

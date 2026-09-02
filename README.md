@@ -47,13 +47,73 @@ Python-скрипты автоматизируют выгрузку данных
 Кратко: добавлены индексы и материализованные представления, тяжёлые
 запросы ускорены в 4–25 раз.
 
+## Python-автоматизация
+
+Каталог `python/`:
+
+| Файл                 | Назначение                                                  |
+|----------------------|-------------------------------------------------------------|
+| `extract_oracle.py`  | Выгрузка проблемных заказов из MV в CSV                     |
+| `api_client.py`      | HTTP-клиент для обмена с внешним порталом и health-check    |
+| `notify.py`          | Уведомления по email и webhook (Slack/Mattermost)           |
+| `requirements.txt`   | Зависимости Python                                          |
+
+### Быстрый старт
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r python/requirements.txt
+
+cp config/config.example.yaml config/config.yaml
+$EDITOR config/config.yaml          # подставить реальные значения
+
+python python/extract_oracle.py \
+    --config config/config.yaml \
+    --output ./out
+```
+
+Результат: `out/problem_orders.csv` и `out/supplier_summary.csv`.
+
+## Расширение OeBS (PL/SQL)
+
+Каталог `oebs/plsql/`:
+
+| Файл                             | Назначение                                                 |
+|----------------------------------|------------------------------------------------------------|
+| `xx_problem_orders_pkg.sql`      | Спецификация пакета: API для OAF и конкурентной программы  |
+| `xx_problem_orders_pkg_body.sql` | Тело пакета: правила выявления проблемных заказов          |
+| `xx_problem_orders_conc.sql`     | Регистрация конкурентной программы и расписания в EBS      |
+
+### Установка
+
+```sql
+-- под SYSDBA или APPS
+@oebs/plsql/xx_problem_orders_pkg.sql
+@oebs/plsql/xx_problem_orders_pkg_body.sql
+@oebs/plsql/xx_problem_orders_conc.sql
+```
+
+После установки конкурентная программа `XX_PROBLEM_ORDERS_REFRESH`
+запускается ежедневно в 02:15 job-ом `XX_PROBLEM_ORDERS_DAILY`.
+
+### API пакета
+
+- `get_problem_orders(p_org_id, p_date_from, p_date_to, p_vendor_id)` —
+  пайплайновая функция, возвращает коллекцию проблемных заказов.
+- `evaluate_order(p_po_header_id)` — проверяет один заказ по всем правилам.
+- `refresh_problem_orders` — обновляет материализованные представления.
+- `notify_responsible(p_org_id)` — инициирует отправку уведомлений.
+- `count_problem_orders(p_org_id)` — количество проблемных заказов.
+- `get_supplier_problem_amount(p_vendor_id)` — сумма проблем по поставщику.
+
 ## Планируемые этапы
 
 1. ✅ Каркас репозитория и документация
 2. ✅ SQL-запросы к таблицам закупок
 3. ✅ Оптимизация запросов: индексы и материализованные представления
-4. ✅Python-скрипты для выгрузки и интеграции
-5. PL/SQL-пакет и конкурентная программа в OeBS
+4. ✅ Python-скрипты для выгрузки и интеграции
+5. ✅ PL/SQL-пакет и конкурентная программа в OeBS
 6. OAF-страница для отображения проблемных заказов
 7. Дашборды и отчёты Oracle BI
 8. Скрипты развёртывания и настройки среды
