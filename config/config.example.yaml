@@ -4,17 +4,26 @@
 # Файл config/config.yaml добавлен в .gitignore.
 # ============================================================
 
+# --- Среда ---
+environment: dev            # dev | test | prod
+
+# --- Oracle ---
 oracle:
   user: "apps"
   password: "CHANGE_ME"
   dsn: "//oebs-db.example.local:1521/EBSDB"
+  # Для продакшена рекомендуется Oracle Wallet:
+  # wallet_dir: "/opt/oracle/wallet"
+  # wallet_password: "CHANGE_ME"
 
+# --- Внешний API ---
 api:
   base_url: "https://portal.example.local/api"
   token: "CHANGE_ME"
   timeout: 30
   retries: 3
 
+# --- SMTP ---
 smtp:
   host: "smtp.example.local"
   port: 587
@@ -26,10 +35,25 @@ smtp:
     - "analytics@example.local"
   use_tls: true
 
+# --- Webhook (Slack/Mattermost/корпоративный бот) ---
 webhook:
   url: "https://chat.example.local/hooks/po-sentinel"
   token: "CHANGE_ME"
 
+# --- Пути ---
 paths:
   output_dir: "./out"
   log_dir: "./logs"
+
+# --- Oracle BI ---
+bi:
+  catalog_dir: "/shared/PO_Sentinel"
+  dashboard: "procurement_delay.xml"
+  report: "problem_orders.rdl"
+  refresh_cron: "0 3 * * *"
+
+# --- EBS ---
+ebs:
+  concurrent_program: "XX_PROBLEM_ORDERS_REFRESH"
+  concurrent_job: "XX_PROBLEM_ORDERS_DAILY"
+  schedule: "FREQ=DAILY; BYHOUR=2; BYMINUTE=15"

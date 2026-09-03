@@ -21,13 +21,44 @@ Python-скрипты автоматизируют выгрузку данных
 - Python 3.11+ (oracledb, requests, pandas)
 - Bash (скрипты развёртывания)
 
+## Быстрый старт
+
+```bash
+git clone git@github.com:<user>/po-sentinel.git
+cd po-sentinel
+cp config/config.example.yaml config/config.yaml
+$EDITOR config/config.yaml
+
+./deploy/install_oebs.sh --env dev --apps-user apps --apps-pass '****'
+./deploy/setup_bi.sh --bi-home /opt/oracle/bi --env dev
+
+python -m venv .venv && source .venv/bin/activate
+pip install -r python/requirements.txt
+python python/extract_oracle.py --config config/config.yaml --output ./out
+```
+
+Подробности — в [docs/deployment.md](docs/deployment.md).
+
+## Структура репозитория
+
+| Каталог        | Назначение                                                |
+|----------------|-----------------------------------------------------------|
+| `sql/`         | SQL-запросы, индексы, материализованные представления     |
+| `python/`      | Скрипты выгрузки, интеграции и уведомлений                |
+| `oebs/plsql/`  | PL/SQL-пакет и конкурентная программа                     |
+| `oebs/oaf/`    | OAF/ADF-страница «Problem Orders»                         |
+| `bi/`          | Oracle BI: дашборды, отчёты, источник данных              |
+| `deploy/`      | Скрипты установки, патчей, настройки BI                   |
+| `config/`      | Пример конфигурации (реальный `config.yaml` в `.gitignore`) |
+| `docs/`        | Архитектура, производительность, развёртывание            |
+
 ## Архитектура
 
 Подробное описание — в [docs/architecture.md](docs/architecture.md).
 
 ## SQL-запросы
 
-Базовые запросы к таблицам Oracle EBS лежат в каталоге `sql/`:
+Каталог `sql/`:
 
 | Файл                | Назначение                                             |
 |---------------------|--------------------------------------------------------|
@@ -37,9 +68,6 @@ Python-скрипты автоматизируют выгрузку данных
 | `04_suppliers.sql`  | Поставщики и площадки (PO_VENDORS, PO_VENDOR_SITES_ALL)|
 | `indexes.sql`       | Индексы для ускорения выборок                          |
 | `mviews.sql`        | Материализованные представления и job обновления       |
-
-Эти запросы — основа для правил выявления проблемных заказов
-(просрочка, отсутствие поступления, расхождение цены, задолженность).
 
 ## Производительность
 
@@ -58,23 +86,6 @@ Python-скрипты автоматизируют выгрузку данных
 | `notify.py`          | Уведомления по email и webhook (Slack/Mattermost)           |
 | `requirements.txt`   | Зависимости Python                                          |
 
-### Быстрый старт
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r python/requirements.txt
-
-cp config/config.example.yaml config/config.yaml
-$EDITOR config/config.yaml          # подставить реальные значения
-
-python python/extract_oracle.py \
-    --config config/config.yaml \
-    --output ./out
-```
-
-Результат: `out/problem_orders.csv` и `out/supplier_summary.csv`.
-
 ## Расширение OeBS (PL/SQL)
 
 Каталог `oebs/plsql/`:
@@ -85,18 +96,6 @@ python python/extract_oracle.py \
 | `xx_problem_orders_pkg_body.sql` | Тело пакета: правила выявления проблемных заказов          |
 | `xx_problem_orders_conc.sql`     | Регистрация конкурентной программы и расписания в EBS      |
 
-### Установка
-
-```sql
--- под SYSDBA или APPS
-@oebs/plsql/xx_problem_orders_pkg.sql
-@oebs/plsql/xx_problem_orders_pkg_body.sql
-@oebs/plsql/xx_problem_orders_conc.sql
-```
-
-После установки конкурентная программа `XX_PROBLEM_ORDERS_REFRESH`
-запускается ежедневно в 02:15 job-ом `XX_PROBLEM_ORDERS_DAILY`.
-
 ### API пакета
 
 - `get_problem_orders(p_org_id, p_date_from, p_date_to, p_vendor_id)` —
@@ -105,7 +104,7 @@ python python/extract_oracle.py \
 - `evaluate_order(p_po_header_id)` — проверяет один заказ по всем правилам.
 - `refresh_problem_orders` — обновляет материализованные представления.
 - `refresh_and_notify(p_org_id, p_notify)` — обновляет MV и рассылает
-  уведомления (точка входа для конкурентной программы и кнопки «Обновить»).
+  уведомления.
 - `notify_responsible(p_org_id)` — инициирует отправку уведомлений.
 - `count_problem_orders(p_org_id)` — количество проблемных заказов.
 - `get_supplier_problem_amount(p_vendor_id)` — сумма проблем по поставщику.
@@ -120,24 +119,6 @@ python python/extract_oracle.py \
 | `XXProblemOrdersCO.java`   | Controller: поиск, обновление MV, экспорт в CSV        |
 | `XXProblemOrdersVO.xml`    | View Object: читает данные через PL/SQL-функцию        |
 
-### Функциональность страницы
-
-- Поиск по организации, поставщику и диапазону дат создания.
-- Таблица с флагами проблем: просрочка, нет поступления, расхождение
-  цены, не оплачен.
-- Колонка `ProblemCount` — сколько правил сработало.
-- Кнопка «Обновить» вызывает `refresh_and_notify` и перечитывает данные.
-- Кнопка «Экспорт CSV» формирует файл из текущей выборки.
-
-### Подключение в EBS
-
-1. Установить PL/SQL-пакет (см. выше).
-2. Разместить OAF-файлы через XML Importer или скопировать их в
-   `$JAVA_TOP/xx/oracle/apps/po/sentinel/webui/`.
-3. Зарегистрировать функцию в `FND_FORM_FUNCTIONS` с типом `OAF`,
-   указав `XXProblemOrdersPG`.
-4. Добавить функцию в меню закупок или кастомное меню.
-
 ## Oracle BI
 
 Каталог `bi/`:
@@ -148,27 +129,32 @@ python python/extract_oracle.py \
 | `dashboards/procurement_delay.xml`   | Дашборд «Procurement Delay»                      |
 | `reports/problem_orders.rdl`         | Отчёт BI Publisher «Problem Orders Report»       |
 
-### Дашборд «Procurement Delay»
+## Развёртывание
 
-- KPI: проблемные заказы, сумма проблем, поставщики под риском,
-  просроченные заказы.
-- График «Overdue Trend» — динамика просрочек по неделям.
-- Pie «Problem Types Distribution» — распределение по типам проблем.
-- Bar «Top 10 Suppliers by Problem Amount».
-- Таблица «Problem Orders» с drill-down до конкретного PO.
-- Фильтры: организация, поставщик, диапазон дат.
+Каталог `deploy/`:
 
-### Отчёт «Problem Orders Report»
+| Скрипт                | Назначение                                                    |
+|-----------------------|---------------------------------------------------------------|
+| `install_oebs.sh`     | Установка PL/SQL-объектов, MV и конкурентной программы         |
+| `apply_patches.sh`    | Применение инкрементальных патчей из `deploy/patches/`         |
+| `setup_bi.sh`         | Развёртывание дашборда, отчёта и источника данных в Oracle BI  |
 
-- PDF + XLSX, ежедневная подписка на email.
-- Разделы: сводка, таблица проблемных заказов, таблица по поставщикам.
+Полная инструкция — в [docs/deployment.md](docs/deployment.md).
 
-### Развёртывание BI
+### Установка (кратко)
 
-1. Импортировать `bi/datasources/oracle_ebs.xml` в BI Catalog.
-2. Импортировать `bi/dashboards/procurement_delay.xml`.
-3. Импортировать `bi/reports/problem_orders.rdl`.
-4. Настроить расписания и подписки.
+```bash
+chmod +x deploy/*.sh
+
+./deploy/install_oebs.sh --env dev --apps-user apps --apps-pass '****'
+./deploy/setup_bi.sh     --bi-home /opt/oracle/bi --env dev
+```
+
+### Патчи
+
+```bash
+./deploy/apply_patches.sh --env dev --from 001
+```
 
 ## Планируемые этапы
 
@@ -179,7 +165,7 @@ python python/extract_oracle.py \
 5. ✅ PL/SQL-пакет и конкурентная программа в OeBS
 6. ✅ OAF-страница для отображения проблемных заказов
 7. ✅ Дашборды и отчёты Oracle BI
-8. Скрипты развёртывания и настройки среды
+8. ✅ Скрипты развёртывания и настройки среды
 9. Итоговая документация и рекомендации
 
 ## Лицензия
