@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  XXProblemOrdersPG.xml
+  Page definition для OAF-страницы "PO Sentinel — Problem Orders".
+
+  Отображает проблемные заказы из xx_problem_orders_pkg.get_problem_orders.
+  Используется как регион в стандартной странице EBS или отдельная страница.
+-->
+<page xmlns="http://xmlns.oracle.com/oaf"
+      xmlns:oa="http://xmlns.oracle.com/oaf/adf"
+      xmlns:oaweb="http://xmlns.oracle.com/oaf/web"
+      pageName="XXProblemOrdersPG"
+      regionName="XXProblemOrdersRN">
+
+    <pageLayout>
+        <pageButtons>
+            <oaweb:button name="Refresh" id="Refresh"
+                          action="refreshResults" prompt="Обновить"/>
+            <oaweb:button name="Export"  id="Export"
+                          action="exportCsv"      prompt="Экспорт CSV"/>
+        </pageButtons>
+    </pageLayout>
+
+    <topRegion>
+        <oa:messageComponent name="PageMessages"/>
+        <oa:messageComponent name="ProcessMessages"/>
+    </topRegion>
+
+    <searchRegion>
+        <oa:defaultingCriteria>
+            <oa:criteriaItem name="OrgId"
+                             viewAttr="OrgId"
+                             prompt="Организация"/>
+            <oa:criteriaItem name="VendorId"
+                             viewAttr="VendorId"
+                             prompt="Поставщик"/>
+            <oa:criteriaItem name="DateFrom"
+                             viewAttr="DateFrom"
+                             prompt="Дата создания с"/>
+            <oa:criteriaItem name="DateTo"
+                             viewAttr="DateTo"
+                             prompt="Дата создания по"/>
+        </oa:defaultingCriteria>
+        <oaweb:button name="Search" id="Search"
+                      action="search" prompt="Найти"/>
+    </searchRegion>
+
+    <resultsRegion>
+        <oa:tableLayout name="ProblemOrdersTable"
+                        viewName="ProblemOrdersVO"
+                        rowsPerPage="25"
+                        orderBy="CreationDate"
+                        orderDirection="DESC">
+            <oa:column name="PoNumber"      prompt="Номер заказа"/>
+            <oa:column name="VendorName"    prompt="Поставщик"/>
+            <oa:column name="TotalAmount"   prompt="Сумма"    formatMask="#,##0.00"/>
+            <oa:column name="CurrencyCode"  prompt="Валюта"/>
+            <oa:column name="CreationDate"  prompt="Создан"   formatMask="DD.MM.YYYY"/>
+            <oa:column name="ApprovedDate"  prompt="Утверждён" formatMask="DD.MM.YYYY"/>
+            <oa:column name="FlagOverdue"    prompt="Просрочка"/>
+            <oa:column name="FlagNoReceipt"  prompt="Нет поступления"/>
+            <oa:column name="FlagPriceDiff"  prompt="Расхождение цены"/>
+            <oa:column name="FlagUnpaid"     prompt="Не оплачен"/>
+            <oa:column name="ProblemCount"   prompt="Кол-во проблем"/>
+        </oa:tableLayout>
+    </resultsRegion>
+
+</page>

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  XXProblemOrdersVO.xml
+  View Object для OAF-страницы PO Sentinel.
+  Читает данные из PL/SQL-функции xx_problem_orders_pkg.get_problem_orders.
+-->
+<ViewObject xmlns="http://xmlns.oracle.com/bc4j"
+            Name="XXProblemOrdersVO"
+            Version="1.0"
+            Extends="oracle.apps.fnd.framework.server.OAViewObjectImpl"
+            FetchMode="FETCH_AS_NEEDED"
+            FetchSize="25"
+            OrderBy="CreationDate DESC">
+
+    <SQLQuery>
+        <![CDATA[
+            SELECT
+                po_header_id    AS PoHeaderId,
+                po_number       AS PoNumber,
+                org_id          AS OrgId,
+                vendor_id       AS VendorId,
+                vendor_name     AS VendorName,
+                currency_code   AS CurrencyCode,
+                total_amount    AS TotalAmount,
+                creation_date   AS CreationDate,
+                approved_date   AS ApprovedDate,
+                flag_overdue    AS FlagOverdue,
+                flag_no_receipt AS FlagNoReceipt,
+                flag_price_diff AS FlagPriceDiff,
+                flag_unpaid     AS FlagUnpaid,
+                problem_count   AS ProblemCount
+            FROM
+                TABLE(xx_problem_orders_pkg.get_problem_orders(
+                    p_org_id    => :OrgId,
+                    p_date_from => :DateFrom,
+                    p_date_to   => :DateTo,
+                    p_vendor_id => :VendorId
+                ))
+        ]]>
+    </SQLQuery>
+
+    <EntityUsage Name="XXProblemOrdersEO"
+                 Entity="xx.oracle.apps.po.sentinel.schema.server.XXProblemOrdersEO"/>
+
+    <ViewAttribute Name="PoHeaderId"    IsUpdateable="false"
+                   EntityAttrName="PoHeaderId" EntityUsage="XXProblemOrdersEO"/>
+    <ViewAttribute Name="PoNumber"      IsUpdateable="false"
+                   EntityAttrName="PoNumber"   EntityUsage="XXProblemOrdersEO"/>
+    <ViewAttribute Name="OrgId"         IsUpdateable="false"
+                   EntityAttrName="OrgId"      EntityUsage="XXProblemOrdersEO"/>
+    <ViewAttribute Name="VendorId"      IsUpdateable="false"
+                   EntityAttrName="VendorId"   EntityUsage="XXProblemOrdersEO"/>
+    <ViewAttribute Name="VendorName"    IsUpdateable="false"
+                   EntityAttrName="VendorName" EntityUsage="XXProblemOrdersEO"/>
+    <ViewAttribute Name="CurrencyCode"  IsUpdateable="false"
+                   EntityAttrName="CurrencyCode" EntityUsage="XXProblemOrdersEO"/>
+    <ViewAttribute Name="TotalAmount"   IsUpdateable="false"
+                   EntityAttrName="TotalAmount" EntityUsage="XXProblemOrdersEO"/>
+    <ViewAttribute Name="CreationDate"  IsUpdateable="false"
+                   EntityAttrName="CreationDate" EntityUsage="XXProblemOrdersEO"/>
+    <ViewAttribute Name="ApprovedDate"  IsUpdateable="false"
+                   EntityAttrName="ApprovedDate" EntityUsage="XXProblemOrdersEO"/>
+    <ViewAttribute Name="FlagOverdue"   IsUpdateable="false"
+                   EntityAttrName="FlagOverdue"  EntityUsage="XXProblemOrdersEO"/>
+    <ViewAttribute Name="FlagNoReceipt" IsUpdateable="false"
+                   EntityAttrName="FlagNoReceipt" EntityUsage="XXProblemOrdersEO"/>
+    <ViewAttribute Name="FlagPriceDiff" IsUpdateable="false"
+                   EntityAttrName="FlagPriceDiff" EntityUsage="XXProblemOrdersEO"/>
+    <ViewAttribute Name="FlagUnpaid"    IsUpdateable="false"
+                   EntityAttrName="FlagUnpaid"   EntityUsage="XXProblemOrdersEO"/>
+    <ViewAttribute Name="ProblemCount"  IsUpdateable="false"
+                   EntityAttrName="ProblemCount" EntityUsage="XXProblemOrdersEO"/>
+
+    <ViewCriteria Name="SearchCriteria">
+        <ViewCriteriaRow>
+            <ViewCriteriaItem ViewAttr="OrgId"        Operator="="/>
+            <ViewCriteriaItem ViewAttr="VendorId"     Operator="="/>
+            <ViewCriteriaItem ViewAttr="CreationDate" Operator=">=" Conjunction="AND"/>
+            <ViewCriteriaItem ViewAttr="CreationDate" Operator="<=" Conjunction="AND"/>
+        </ViewCriteriaRow>
+    </ViewCriteria>
+
+</ViewObject>

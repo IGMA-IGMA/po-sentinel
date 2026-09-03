@@ -58,6 +58,11 @@ CREATE OR REPLACE PACKAGE xx_problem_orders_pkg AS
     ) RETURN t_problem_orders_tab
         PIPELINED;
 
+    -- Вернуть один проблемный заказ по id (для OAF-детализации).
+    FUNCTION get_problem_order_by_id(
+        p_po_header_id IN NUMBER
+    ) RETURN t_problem_order_rec;
+
     -- Пересчитать флаги проблем для одного заказа.
     -- Возвращает TRUE, если заказ проблемный.
     FUNCTION evaluate_order(
@@ -71,6 +76,13 @@ CREATE OR REPLACE PACKAGE xx_problem_orders_pkg AS
     -- Отправить уведомления по проблемным заказам (через Python-скрипт).
     PROCEDURE notify_responsible(
         p_org_id IN NUMBER DEFAULT NULL
+    );
+
+    -- Обновить MV и (опционально) отправить уведомления.
+    -- Точка входа для конкурентной программы и OAF-кнопки «Обновить».
+    PROCEDURE refresh_and_notify(
+        p_org_id IN NUMBER   DEFAULT NULL,
+        p_notify IN VARCHAR2 DEFAULT 'Y'
     );
 
     -- --------------------------------------------------------

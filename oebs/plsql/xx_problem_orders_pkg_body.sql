@@ -150,6 +150,54 @@ CREATE OR REPLACE PACKAGE BODY xx_problem_orders_pkg AS
         RETURN;
     END get_problem_orders;
 
+    FUNCTION get_problem_order_by_id(
+        p_po_header_id IN NUMBER
+    ) RETURN t_problem_order_rec IS
+        l_rec t_problem_order_rec;
+    BEGIN
+        SELECT
+            po.po_header_id,
+            po.po_number,
+            po.org_id,
+            po.vendor_id,
+            po.vendor_name,
+            po.currency_code,
+            po.total_amount,
+            po.creation_date,
+            po.approved_date,
+            po.flag_overdue,
+            po.flag_no_receipt,
+            po.flag_price_diff,
+            po.flag_unpaid
+          INTO
+            l_rec.po_header_id,
+            l_rec.po_number,
+            l_rec.org_id,
+            l_rec.vendor_id,
+            l_rec.vendor_name,
+            l_rec.currency_code,
+            l_rec.total_amount,
+            l_rec.creation_date,
+            l_rec.approved_date,
+            l_rec.flag_overdue,
+            l_rec.flag_no_receipt,
+            l_rec.flag_price_diff,
+            l_rec.flag_unpaid
+          FROM xx_mv_problem_orders po
+         WHERE po.po_header_id = p_po_header_id;
+
+        l_rec.problem_count :=
+              CASE WHEN l_rec.flag_overdue    = 'Y' THEN 1 ELSE 0 END
+            + CASE WHEN l_rec.flag_no_receipt = 'Y' THEN 1 ELSE 0 END
+            + CASE WHEN l_rec.flag_price_diff = 'Y' THEN 1 ELSE 0 END
+            + CASE WHEN l_rec.flag_unpaid     = 'Y' THEN 1 ELSE 0 END;
+
+        RETURN l_rec;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN NULL;
+    END get_problem_order_by_id;
+
     PROCEDURE refresh_problem_orders IS
     BEGIN
         DBMS_MVIEW.REFRESH('XX_MV_PROBLEM_ORDERS',  'C');
@@ -170,6 +218,17 @@ CREATE OR REPLACE PACKAGE BODY xx_problem_orders_pkg AS
         -- через хост-команду или DBMS_SCHEDULER.
         DBMS_OUTPUT.PUT_LINE('PO Sentinel: problem orders = ' || l_count);
     END notify_responsible;
+
+    PROCEDURE refresh_and_notify(
+        p_org_id IN NUMBER   DEFAULT NULL,
+        p_notify IN VARCHAR2 DEFAULT 'Y'
+    ) IS
+    BEGIN
+        refresh_problem_orders;
+        IF p_notify = 'Y' THEN
+            notify_responsible(p_org_id);
+        END IF;
+    END refresh_and_notify;
 
     FUNCTION count_problem_orders(p_org_id IN NUMBER DEFAULT NULL) RETURN NUMBER IS
         l_count NUMBER;
