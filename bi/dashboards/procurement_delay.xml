@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  procurement_delay.xml
+  Описание дашборда "PO Sentinel — Procurement Delay".
+
+  Состав:
+    1. KPI-плитки (количество проблемных заказов, сумма потерь, поставщиков с проблемами).
+    2. Динамика просрочек по неделям.
+    3. Топ-10 поставщиков по сумме проблем.
+    4. Распределение по типам проблем (просрочка / нет поступления / расхождение цены / не оплачено).
+    5. Таблица "Проблемные заказы" (drill-down до конкретного PO).
+    6. Фильтры: организация, поставщик, диапазон дат.
+
+  Импортируется через Oracle BI Analytics → Catalog → Import.
+-->
+<dashboard name="PO Sentinel — Procurement Delay"
+           folder="/Shared/PO_Sentinel"
+           defaultRefresh="0 2 * * *">
+
+    <filters>
+        <prompt name="Organization" dataSet="ProblemOrders"
+                column="ORG_ID"        type="lov"
+                lov="SELECT organization_id, name FROM hr_operating_units"/>
+        <prompt name="Vendor"       dataSet="ProblemOrders"
+                column="VENDOR_ID"     type="lov"
+                lov="SELECT vendor_id, vendor_name FROM po_vendors WHERE enabled_flag='Y'"/>
+        <prompt name="DateFrom"     dataSet="ProblemOrders"
+                column="CREATION_DATE" type="date"/>
+        <prompt name="DateTo"       dataSet="ProblemOrders"
+                column="CREATION_DATE" type="date"/>
+    </filters>
+
+    <kpiRow>
+        <kpi name="Problem Orders"
+             dataSet="ProblemOrders"
+             aggregation="countDistinct" column="PO_HEADER_ID"/>
+        <kpi name="Problem Amount"
+             dataSet="SupplierSummary"
+             aggregation="sum" column="PROBLEM_AMOUNT"
+             format="currency"/>
+        <kpi name="Suppliers At Risk"
+             dataSet="SupplierSummary"
+             aggregation="countDistinct" column="VENDOR_ID"
+             filter="problem_amount > 0"/>
+        <kpi name="Overdue Orders"
+             dataSet="ProblemOrders"
+             aggregation="countDistinct" column="PO_HEADER_ID"
+             filter="FLAG_OVERDUE = 'Y'"/>
+    </kpiRow>
+
+    <chartRow>
+        <chart name="Overdue Trend"
+               type="line"
+               dataSet="ProblemOrders"
+               xColumn="CREATION_DATE"
+               yColumn="PO_HEADER_ID"
+               aggregation="countDistinct"
+               groupBy="week"
+               filter="FLAG_OVERDUE = 'Y'"/>
+
+        <chart name="Problem Types Distribution"
+               type="pie"
+               dataSet="ProblemOrders"
+               slices="FLAG_OVERDUE, FLAG_NO_RECEIPT, FLAG_PRICE_DIFF, FLAG_UNPAID"/>
+    </chartRow>
+
+    <chartRow>
+        <chart name="Top 10 Suppliers by Problem Amount"
+               type="bar"
+               orientation="horizontal"
+               dataSet="SupplierSummary"
+               category="VENDOR_NAME"
+               value="PROBLEM_AMOUNT"
+               topN="10"
+               sort="PROBLEM_AMOUNT DESC"/>
+    </chartRow>
+
+    <tableRow>
+        <table name="Problem Orders"
+               dataSet="ProblemOrders"
+               sort="CREATION_DATE DESC"
+               drillDown="ProblemOrderDetail">
+            <column name="PO_NUMBER"         header="Заказ"/>
+            <column name="VENDOR_NAME"       header="Поставщик"/>
+            <column name="TOTAL_AMOUNT"      header="Сумма"
+                    format="currency"/>
+            <column name="CURRENCY_CODE"     header="Валюта"/>
+            <column name="CREATION_DATE"     header="Создан"
+                    format="DD.MM.YYYY"/>
+            <column name="FLAG_OVERDUE"      header="Просрочка"/>
+            <column name="FLAG_NO_RECEIPT"   header="Нет поступления"/>
+            <column name="FLAG_PRICE_DIFF"   header="Расхождение цены"/>
+            <column name="FLAG_UNPAID"       header="Не оплачен"/>
+        </table>
+    </tableRow>
+
+</dashboard>

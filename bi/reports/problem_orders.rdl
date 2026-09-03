@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  problem_orders.rdl
+  Отчёт BI Publisher "PO Sentinel — Problem Orders Report".
+
+  Назначение:
+    - печатная форма для рассылки ответственным сотрудникам;
+    - подписка (bursting) по организациям/поставщикам;
+    - вложения: PDF + XLSX.
+
+  Источник данных: PO_SENTINEL_DM (см. bi/datasources/oracle_ebs.xml).
+-->
+<report name="ProblemOrdersReport"
+        folder="/Shared/PO_Sentinel/Reports"
+        dataModel="PO_SENTINEL_DM"
+        defaultFormat="pdf">
+
+    <parameters>
+        <parameter name="P_ORG_ID"    prompt="Организация"   type="lov"
+                   lov="SELECT organization_id, name FROM hr_operating_units"/>
+        <parameter name="P_DATE_FROM" prompt="Дата с"        type="date"/>
+        <parameter name="P_DATE_TO"   prompt="Дата по"       type="date"/>
+    </parameters>
+
+    <dataSets>
+        <dataSet ref="ProblemOrders">
+            <bind parameter="P_ORG_ID"    column="ORG_ID"/>
+            <bind parameter="P_DATE_FROM" column="CREATION_DATE" operator=">="/>
+            <bind parameter="P_DATE_TO"   column="CREATION_DATE" operator="<="/>
+        </dataSet>
+        <dataSet ref="SupplierSummary"/>
+    </dataSets>
+
+    <layout name="Main">
+        <header>
+            <text value="PO Sentinel — Проблемные заказы на закупку"/>
+            <field value="${P_DATE_FROM} — ${P_DATE_TO}"/>
+            <field value="Организация: ${P_ORG_ID}"/>
+        </header>
+
+        <section name="Summary">
+            <text value="Всего проблемных заказов: "/>
+            <aggregate dataSet="ProblemOrders"
+                       aggregation="countDistinct" column="PO_HEADER_ID"/>
+            <text value="Поставщиков затронуто: "/>
+            <aggregate dataSet="SupplierSummary"
+                       aggregation="countDistinct" column="VENDOR_ID"/>
+            <text value="Сумма проблем: "/>
+            <aggregate dataSet="SupplierSummary"
+                       aggregation="sum" column="PROBLEM_AMOUNT"
+                       format="currency"/>
+        </section>
+
+        <section name="ProblemOrdersTable" type="table">
+            <repeat dataSet="ProblemOrders" sort="CREATION_DATE DESC">
+                <column dataSet="ProblemOrders" column="PO_NUMBER"
+                        header="Заказ"/>
+                <column dataSet="ProblemOrders" column="VENDOR_NAME"
+                        header="Поставщик"/>
+                <column dataSet="ProblemOrders" column="TOTAL_AMOUNT"
+                        header="Сумма" format="currency"/>
+                <column dataSet="ProblemOrders" column="CURRENCY_CODE"
+                        header="Валюта"/>
+                <column dataSet="ProblemOrders" column="CREATION_DATE"
+                        header="Создан" format="DD.MM.YYYY"/>
+                <column dataSet="ProblemOrders" column="FLAG_OVERDUE"
+                        header="Просрочка"/>
+                <column dataSet="ProblemOrders" column="FLAG_NO_RECEIPT"
+                        header="Нет поступления"/>
+                <column dataSet="ProblemOrders" column="FLAG_PRICE_DIFF"
+                        header="Расхождение цены"/>
+                <column dataSet="ProblemOrders" column="FLAG_UNPAID"
+                        header="Не оплачен"/>
+            </repeat>
+        </section>
+
+        <section name="SupplierSummaryTable" type="table">
+            <repeat dataSet="SupplierSummary" sort="PROBLEM_AMOUNT DESC">
+                <column dataSet="SupplierSummary" column="VENDOR_NAME"
+                        header="Поставщик"/>
+                <column dataSet="SupplierSummary" column="TOTAL_ORDERS"
+                        header="Всего заказов"/>
+                <column dataSet="SupplierSummary" column="OVERDUE_ORDERS"
+                        header="Просрочено"/>
+                <column dataSet="SupplierSummary" column="NO_RECEIPT_ORDERS"
+                        header="Нет поступления"/>
+                <column dataSet="SupplierSummary" column="PRICE_DIFF_ORDERS"
+                        header="Расхождение цены"/>
+                <column dataSet="SupplierSummary" column="UNPAID_ORDERS"
+                        header="Не оплачено"/>
+                <column dataSet="SupplierSummary" column="PROBLEM_AMOUNT"
+                        header="Сумма проблем" format="currency"/>
+            </repeat>
+        </section>
+
+        <footer>
+            <text value="Сформировано: "/>
+            <field value="${SYSDATE}"/>
+        </footer>
+    </layout>
+
+    <delivery>
+        <email subject="PO Sentinel — Проблемные заказы ${P_DATE_FROM}—${P_DATE_TO}"
+               from="po-sentinel@example.local"
+               to="procurement-team@example.local">
+            <attach format="pdf"/>
+            <attach format="xlsx"/>
+        </email>
+        <schedule cron="0 3 * * *"/>
+    </delivery>
+</report>
+

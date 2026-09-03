@@ -112,6 +112,58 @@ PL/SQL-пакет реализует правила выявления проб�
    указав `XXProblemOrdersPG`.
 4. Добавить функцию в меню закупок или в кастомное меню.
 
+## Oracle BI
+
+Каталог `bi/`:
+
+| Файл                                 | Назначение                                       |
+|--------------------------------------|--------------------------------------------------|
+| `datasources/oracle_ebs.xml`         | Источник данных: JDBC к APPS + data model        |
+| `dashboards/procurement_delay.xml`   | Дашборд «Procurement Delay»                      |
+| `reports/problem_orders.rdl`         | Отчёт BI Publisher «Problem Orders Report»       |
+
+### Источник данных
+
+JDBC-подключение к схеме APPS, объекты:
+- `XX_MV_PROBLEM_ORDERS` — витрина проблемных заказов.
+- `XX_MV_SUPPLIER_SUMMARY` — сводка по поставщикам.
+- `XX_PROBLEM_ORDERS_PKG` — PL/SQL-пакет для live-выборок (опционально).
+
+Параметры: `P_ORG_ID`, `P_DATE_FROM`, `P_DATE_TO`.
+
+### Дашборд «Procurement Delay»
+
+Состав:
+1. KPI-плитки: количество проблемных заказов, сумма проблем,
+   поставщиков под риском, просроченных заказов.
+2. График «Overdue Trend» — динамика просрочек по неделям.
+3. Pie «Problem Types Distribution» — распределение по типам проблем.
+4. Bar «Top 10 Suppliers by Problem Amount».
+5. Таблица «Problem Orders» с drill-down до конкретного PO.
+6. Фильтры: организация, поставщик, диапазон дат.
+
+Обновление данных — ежедневно в 02:00 (после refresh MV в 02:15
+job-ом `XX_PROBLEM_ORDERS_DAILY`; в BI можно поставить 02:30).
+
+### Отчёт «Problem Orders Report»
+
+- PDF + XLSX.
+- Подписка: email на `procurement-team@example.local`.
+- Расписание: ежедневно в 03:00.
+- Параметры: `P_ORG_ID`, `P_DATE_FROM`, `P_DATE_TO`.
+- Разделы: сводка, таблица проблемных заказов, таблица по поставщикам.
+
+### Развёртывание BI
+
+1. Импортировать `bi/datasources/oracle_ebs.xml` в BI Catalog
+   (каталог `/Shared/PO_Sentinel/DataSources/`).
+2. Импортировать `bi/dashboards/procurement_delay.xml` в
+   `/Shared/PO_Sentinel/Dashboards/`.
+3. Импортировать `bi/reports/problem_orders.rdl` в
+   `/Shared/PO_Sentinel/Reports/`.
+4. Проверить подключение к APPS и права на чтение MV.
+5. Настроить расписания и подписки (email).
+
 ## Взаимодействие с Python
 
 Конкурентная программа после пересчёта MV вызывает Python-скрипт

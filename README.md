@@ -138,6 +138,38 @@ python python/extract_oracle.py \
    указав `XXProblemOrdersPG`.
 4. Добавить функцию в меню закупок или кастомное меню.
 
+## Oracle BI
+
+Каталог `bi/`:
+
+| Файл                                 | Назначение                                       |
+|--------------------------------------|--------------------------------------------------|
+| `datasources/oracle_ebs.xml`         | Источник данных: JDBC к APPS + data model        |
+| `dashboards/procurement_delay.xml`   | Дашборд «Procurement Delay»                      |
+| `reports/problem_orders.rdl`         | Отчёт BI Publisher «Problem Orders Report»       |
+
+### Дашборд «Procurement Delay»
+
+- KPI: проблемные заказы, сумма проблем, поставщики под риском,
+  просроченные заказы.
+- График «Overdue Trend» — динамика просрочек по неделям.
+- Pie «Problem Types Distribution» — распределение по типам проблем.
+- Bar «Top 10 Suppliers by Problem Amount».
+- Таблица «Problem Orders» с drill-down до конкретного PO.
+- Фильтры: организация, поставщик, диапазон дат.
+
+### Отчёт «Problem Orders Report»
+
+- PDF + XLSX, ежедневная подписка на email.
+- Разделы: сводка, таблица проблемных заказов, таблица по поставщикам.
+
+### Развёртывание BI
+
+1. Импортировать `bi/datasources/oracle_ebs.xml` в BI Catalog.
+2. Импортировать `bi/dashboards/procurement_delay.xml`.
+3. Импортировать `bi/reports/problem_orders.rdl`.
+4. Настроить расписания и подписки.
+
 ## Планируемые этапы
 
 1. ✅ Каркас репозитория и документация
@@ -146,10 +178,10 @@ python python/extract_oracle.py \
 4. ✅ Python-скрипты для выгрузки и интеграции
 5. ✅ PL/SQL-пакет и конкурентная программа в OeBS
 6. ✅ OAF-страница для отображения проблемных заказов
-7. Дашборды и отчёты Oracle BI
+7. ✅ Дашборды и отчёты Oracle BI
 8. Скрипты развёртывания и настройки среды
 9. Итоговая документация и рекомендации
 
 ## Лицензия
 
-MIT — см. [LICENSE](LICENSE)
+MIT — см. [LICENSE](LICENSE).
